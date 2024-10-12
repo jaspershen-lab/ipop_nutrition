@@ -3,27 +3,26 @@ setwd(r4projects::get_project_wd())
 library(tidyverse)
 library(plyr)
 rm(list = ls())
-source("1-code/tools.R")
+source("1_code/tools.R")
 
 ###load variable_info
-load("3-data_analysis/nutrition_group/data_preparation/variable_info")
-load("3-data_analysis/nutrition/data_preparation/variable_info")
-nutrition_variable_info <-
+load("3_data_analysis/food_group/data_preparation/variable_info")
+food_variable_info <-
   variable_info
 
-load("3-data_analysis/gut_microbiome/data_preparation/variable_info")
+load("3_data_analysis/gut_microbiome/data_preparation/variable_info")
 microbiome_variable_info <-
   variable_info
 
-load("3-data_analysis/metabolomics/data_preparation/variable_info")
+load("3_data_analysis/metabolomics/data_preparation/variable_info")
 metabolomics_variable_info <-
   variable_info
 
 ###load correlation data
-load("3-data_analysis/nutrition_vs_microbiome_t1_t4/based_on_sspg/cor_data_IS")
-load("3-data_analysis/nutrition_vs_microbiome_t1_t4/based_on_sspg/cor_data_IR")
+load("3_data_analysis/1_food_group_vs_microbiome_t1_t4/based_on_sspg/cor_data_IS")
+load("3_data_analysis/1_food_group_vs_microbiome_t1_t4/based_on_sspg/cor_data_IR")
 
-nutrition_microbiome_cor_is <-
+food_microbiome_cor_is <-
   cor_data_IS %>%
   dplyr::filter(p_adjust < 0.05) %>%
   dplyr::arrange(data_set1) %>%
@@ -35,7 +34,7 @@ nutrition_microbiome_cor_is <-
   dplyr::rename(node1 = data_set1,
                 node2 = data_set2)
 
-nutrition_microbiome_cor_ir <-
+food_microbiome_cor_ir <-
   cor_data_IR %>%
   dplyr::filter(p_adjust < 0.05) %>%
   dplyr::arrange(data_set1) %>%
@@ -48,10 +47,10 @@ nutrition_microbiome_cor_ir <-
                 node2 = data_set2)
 
 ###load correlation data
-load("3-data_analysis/nutrition_vs_metabolomics_t1_t4/based_on_sspg/cor_data_IS")
-load("3-data_analysis/nutrition_vs_metabolomics_t1_t4/based_on_sspg/cor_data_IR")
+load("3_data_analysis/3_food_group_vs_metabolomics_t1_t4/based_on_sspg/cor_data_IS")
+load("3_data_analysis/3_food_group_vs_metabolomics_t1_t4/based_on_sspg/cor_data_IR")
 
-nutrition_metabolomics_cor_is <-
+food_metabolomics_cor_is <-
   cor_data_IS %>%
   dplyr::filter(p_adjust < 0.05) %>%
   dplyr::arrange(data_set1) %>%
@@ -65,7 +64,7 @@ nutrition_metabolomics_cor_is <-
   dplyr::rename(node1 = data_set1,
                 node2 = data_set2)
 
-nutrition_metabolomics_cor_ir <-
+food_metabolomics_cor_ir <-
   cor_data_IR %>%
   dplyr::filter(p_adjust < 0.05) %>%
   dplyr::arrange(data_set1) %>%
@@ -79,17 +78,17 @@ nutrition_metabolomics_cor_ir <-
   dplyr::rename(node1 = data_set1,
                 node2 = data_set2)
 
-dir.create("3-data_analysis/7-nutrition_microbiome_metabolomics_network",
+dir.create("3_data_analysis/4_food_microbiome_metabolomics_network",
            recursive = TRUE)
-setwd("3-data_analysis/7-nutrition_microbiome_metabolomics_network")
+setwd("3_data_analysis/4_food_microbiome_metabolomics_network")
 
 edge_data_is <-
-  rbind(nutrition_microbiome_cor_is,
-        nutrition_metabolomics_cor_is)
+  rbind(food_microbiome_cor_is,
+        food_metabolomics_cor_is)
 
 edge_data_ir <-
-  rbind(nutrition_microbiome_cor_ir,
-        nutrition_metabolomics_cor_ir)
+  rbind(food_microbiome_cor_ir,
+        food_metabolomics_cor_ir)
 
 edge_data_is$p_adjust[edge_data_is$p_adjust == 0] <-
   min(edge_data_is$p_adjust[edge_data_is$p_adjust != 0])
@@ -242,10 +241,7 @@ network_is <-
   )
 network_is
 extrafont::loadfonts()
-ggsave(network_is,
-       filename = "network_is.pdf",
-       width = 6,
-       height = 6.21)
+ggsave(network_is, filename = "network_is.pdf", width = 6, height = 6.21)
 
 network_ir <-
   ggraph(graph_ir,
@@ -270,7 +266,4 @@ network_ir <-
     legend.position = "bottom"
   )
 network_ir
-ggsave(network_ir,
-       filename = "network_ir.pdf",
-       width = 6,
-       height = 6.21)
+ggsave(network_ir, filename = "network_ir.pdf", width = 6, height = 6.21)

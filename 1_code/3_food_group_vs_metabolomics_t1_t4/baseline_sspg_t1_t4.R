@@ -3,39 +3,18 @@ setwd(r4projects::get_project_wd())
 library(tidyverse)
 library(plyr)
 rm(list = ls())
-source("1-code/tools.R")
+source("1_code/tools.R")
 
 ###load data
 {
   ##nutrition
-  load("3-data_analysis/nutrition_t1_t4/data_preparation/expression_data")
-  load("3-data_analysis/nutrition_t1_t4/data_preparation/sample_info")
-  load("3-data_analysis/nutrition_t1_t4/data_preparation/variable_info")
+  load("3_data_analysis/food_group/data_preparation/expression_data")
+  load("3_data_analysis/food_group/data_preparation/sample_info")
+  load("3_data_analysis/food_group/data_preparation/variable_info")
   
   nutrition_expression_data = expression_data
   nutrition_sample_info = sample_info
   nutrition_variable_info = variable_info
-  
-  ###remove some nutrients
-  rownames(nutrition_expression_data)
-  nutrition_variable_info <-
-    nutrition_variable_info %>%
-    dplyr::filter(
-      !variable_id %in% c(
-        "Fib",
-        "Carb",
-        "Pro",
-        "Fat",
-        "FatCals",
-        "SatCals",
-        "VitD_mcg",
-        "Fol_DFE",
-        "OCarb",
-        "VitA_RAE"
-      )
-    )
-  nutrition_expression_data <-
-    nutrition_expression_data[nutrition_variable_info$variable_id, ]
   
   filter_subject_id =
     nutrition_sample_info %>%
@@ -51,38 +30,37 @@ source("1-code/tools.R")
   nutrition_expression_data =
     nutrition_expression_data[, nutrition_sample_info$sample_id]
   
-  ##microbiome
-  load("3-data_analysis/gut_microbiome/data_preparation/expression_data")
-  load("3-data_analysis/gut_microbiome/data_preparation/sample_info")
-  load("3-data_analysis/gut_microbiome/data_preparation/variable_info")
+  ##metabolomics
+  load("3_data_analysis/metabolomics/data_preparation/expression_data")
+  load("3_data_analysis/metabolomics/data_preparation/sample_info")
+  load("3_data_analysis/metabolomics/data_preparation/variable_info")
   
-  microbiome_expression_data = expression_data
-  microbiome_sample_info = sample_info
-  microbiome_variable_info = variable_info
+  metabolomics_expression_data = expression_data
+  metabolomics_sample_info = sample_info
+  metabolomics_variable_info = variable_info
 }
 
-dir.create("3-data_analysis/nutrition_vs_microbiome_t1_t4/")
-dir.create("3-data_analysis/nutrition_vs_microbiome_t1_t4/based_on_sspg/")
-setwd("3-data_analysis/nutrition_vs_microbiome_t1_t4/based_on_sspg/")
+dir.create("3_data_analysis/3_food_group_vs_metabolomics_t1_t4/based_on_sspg/")
+setwd("3_data_analysis/3_food_group_vs_metabolomics_t1_t4/based_on_sspg/")
 
 ###data preparation
 nutrition_sample_info$Diet.Survey.Date
 nutrition_sample_info$CollectionDate
 
-####match microbiome data from baseline
-microbiome_sample_info =
-  microbiome_sample_info %>%
+####match metabolomics data from baseline
+metabolomics_sample_info =
+  metabolomics_sample_info %>%
   dplyr::mutate(CollectionDate = as.Date(CollectionDate, format = "%m/%d/%y"))
 
-matched_sample =
+matched_sample <-
   nutrition_sample_info %>%
   t() %>%
   as.data.frame() %>%
   purrr::map(function(x) {
-    subject_id1 = x[2]
+    subject_id1 = x[4]
     date1 = as.Date(x[5])
     temp =
-      microbiome_sample_info %>%
+      metabolomics_sample_info %>%
       dplyr::filter(subject_id == subject_id1)
     temp %>%
       dplyr::mutate(diff_days = as.numeric(CollectionDate - date1)) %>%
@@ -119,8 +97,8 @@ matched_idx
 
 cbind(nutrition_sample_info[match(matched_idx$sample_id1, nutrition_sample_info$sample_id),
                             c("sample_id", "Diet.Survey.Date")],
-      microbiome_sample_info[match(matched_idx$sample_id2, microbiome_sample_info$sample_id),
-                             c("sample_id", "CollectionDate")])
+      metabolomics_sample_info[match(matched_idx$sample_id2, metabolomics_sample_info$sample_id),
+                               c("sample_id", "CollectionDate")])
 
 matched_idx =
   matched_idx %>%
@@ -147,34 +125,34 @@ nutrition_expression_data =
   nutrition_expression_data[, nutrition_sample_info$sample_id]
 
 nutrition_expression_data = nutrition_expression_data[, matched_idx$sample_id1]
-microbiome_expression_data = microbiome_expression_data[, matched_idx$sample_id2]
+metabolomics_expression_data = metabolomics_expression_data[, matched_idx$sample_id2]
 
 nutrition_sample_info =
   nutrition_sample_info[match(colnames(nutrition_expression_data),
-                              nutrition_sample_info$sample_id),]
+                              nutrition_sample_info$sample_id), ]
 
-microbiome_sample_info =
-  microbiome_sample_info[match(colnames(microbiome_expression_data),
-                               microbiome_sample_info$sample_id),]
+metabolomics_sample_info =
+  metabolomics_sample_info[match(colnames(metabolomics_expression_data),
+                                 metabolomics_sample_info$sample_id), ]
 
 dim(nutrition_expression_data)
-dim(microbiome_expression_data)
+dim(metabolomics_expression_data)
 
-colnames(microbiome_expression_data) =
+colnames(metabolomics_expression_data) =
   colnames(nutrition_expression_data)
 
+# nutrition_expression_data[is.na(nutrition_expression_data)] <- 0
+
 ######calculate the correlation between nutrition and metabolites
-####missing value
-nutrition_expression_data %>%
+metabolomics_expression_data =
+  log(metabolomics_expression_data + 1, 2)
+
+metabolomics_expression_data =
+  metabolomics_expression_data %>%
   apply(1, function(x) {
-    sum(is.na(x))
+    (x) / sd(x)
   }) %>%
-  plot()
-
-library(impute)
-
-nutrition_expression_data =
-  impute::impute.knn(data = as.matrix(nutrition_expression_data))$data %>%
+  t() %>%
   as.data.frame()
 
 ###scale
@@ -186,8 +164,10 @@ nutrition_expression_data =
   t() %>%
   as.data.frame()
 
+nutrition_expression_data[is.na(nutrition_expression_data)] <- 0
+
 range(nutrition_expression_data)
-range(microbiome_expression_data)
+range(metabolomics_expression_data)
 
 ###############################################################################
 ####based on the sspg status
@@ -207,7 +187,7 @@ sample_info_IR =
 # cor_data =
 #   partial_cor_pattern(
 #     data_set1 = nutrition_expression_data,
-#     data_set2 = microbiome_expression_data,
+#     data_set2 = metabolomics_expression_data,
 #     sample_info = nutrition_sample_info,
 #     method = "spearman",
 #     threads = 5
@@ -215,7 +195,7 @@ sample_info_IR =
 # cor_data_IS =
 #   partial_cor_pattern(
 #     data_set1 = nutrition_expression_data[, sample_info_IS$sample_id],
-#     data_set2 = microbiome_expression_data[, sample_info_IS$sample_id],
+#     data_set2 = metabolomics_expression_data[, sample_info_IS$sample_id],
 #     sample_info = sample_info_IS,
 #     method = "spearman",
 #     threads = 5
@@ -224,7 +204,7 @@ sample_info_IR =
 # cor_data_IR =
 #   partial_cor_pattern(
 #     data_set1 = nutrition_expression_data[, sample_info_IR$sample_id],
-#     data_set2 = microbiome_expression_data[, sample_info_IR$sample_id],
+#     data_set2 = metabolomics_expression_data[, sample_info_IR$sample_id],
 #     sample_info = sample_info_IR,
 #     method = "spearman",
 #     threads = 5
@@ -236,10 +216,6 @@ sample_info_IR =
 load("cor_data")
 load("cor_data_IS")
 load("cor_data_IR")
-
-write.csv(cor_data, "cor_data.csv", row.names = FALSE)
-write.csv(cor_data_IS, "cor_data_IS.csv", row.names = FALSE)
-write.csv(cor_data_IR, "cor_data_IR.csv", row.names = FALSE)
 
 dim(cor_data_IS)
 dim(cor_data_IR)
@@ -255,31 +231,30 @@ library(openxlsx)
 cor_data_output =
   cor_data %>%
   dplyr::filter(p_adjust < 0.05) %>%
-  dplyr::left_join(microbiome_variable_info, by = c("data_set2" = "variable_id")) %>%
+  dplyr::left_join(metabolomics_variable_info, by = c("data_set2" = "variable_id")) %>%
   dplyr::select(-p_adjust2) %>%
   dplyr::arrange(p_adjust)
 
 cor_data_IS_output =
   cor_data_IS %>%
   dplyr::filter(p_adjust < 0.05) %>%
-  dplyr::left_join(microbiome_variable_info, by = c("data_set2" = "variable_id")) %>%
+  dplyr::left_join(metabolomics_variable_info, by = c("data_set2" = "variable_id")) %>%
   dplyr::select(-p_adjust2) %>%
   dplyr::arrange(p_adjust)
 
 cor_data_IR_output =
   cor_data_IR %>%
   dplyr::filter(p_adjust < 0.05) %>%
-  dplyr::left_join(microbiome_variable_info, by = c("data_set2" = "variable_id")) %>%
+  dplyr::left_join(metabolomics_variable_info, by = c("data_set2" = "variable_id")) %>%
   dplyr::select(-p_adjust2) %>%
   dplyr::arrange(p_adjust)
 
-
-openxlsx::write.xlsx(
-  cor_data_output,
-  "cor_data_output.xlsx",
-  asTable = TRUE,
-  overwrite = TRUE
-)
+# openxlsx::write.xlsx(
+#   cor_data_output,
+#   "cor_data_output.xlsx",
+#   asTable = TRUE,
+#   overwrite = TRUE
+# )
 # openxlsx::write.xlsx(
 #   cor_data_IS_output,
 #   "cor_data_IS_output.xlsx",
@@ -321,7 +296,7 @@ idx = which(cor_data_IR$p_adjust < 0.05)
 # for(i in idx) {
 # cat(i, " ")
 #   x = as.numeric(nutrition_expression_data[cor_data_IR$data_set1[i],])
-#   y = as.numeric(microbiome_expression_data[cor_data_IR$data_set2[i],])
+#   y = as.numeric(metabolomics_expression_data[cor_data_IR$data_set2[i],])
 #   data.frame(x, y) %>%
 #     ggplot(aes(x,y)) +
 #     geom_point()
@@ -331,42 +306,40 @@ cor_data_IR %>%
   dplyr::arrange(desc(abs(cor))) %>%
   head()
 
-# plot(as.numeric(nutrition_expression_data["VitC", sample_info_IR$sample_id]),
-#      as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_IR$sample_id]))
-# 
-# abline(0, -1)
-# 
-# cor_data_IS %>%
-#   dplyr::arrange(desc(abs(cor))) %>%
-#   head()
-# 
-# plot(as.numeric(nutrition_expression_data["VitC", sample_info_IS$sample_id]),
-#      as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_IS$sample_id]))
-# 
-# abline(0, -1)
-# 
-# cor(
-#   as.numeric(nutrition_expression_data["VitC", sample_info_IS$sample_id]),
-#   as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_IS$sample_id]),
-#   method = "spearman"
-# )
-# 
+plot(
+  as.numeric(nutrition_expression_data["Nuts_Seeds", sample_info_IR$sample_id]),
+  as.numeric(metabolomics_expression_data["pHILIC_160.0967_7.5", sample_info_IR$sample_id])
+)
+
+abline(0, 1)
+
+cor_data_IS %>%
+  dplyr::arrange(desc(abs(cor))) %>%
+  head()
+
+plot(
+  as.numeric(nutrition_expression_data["Coffee", sample_info_IS$sample_id]),
+  as.numeric(metabolomics_expression_data["pHILIC_754.5367_5.1", sample_info_IS$sample_id])
+)
+
+abline(0, -1)
+
 # temp_sample_info =
 #   sample_info_IS[, c("Sex", "Age")]
-# 
+#
 # temp_sample_info$Sex[temp_sample_info$Sex == 'F'] = 0
 # temp_sample_info$Sex[temp_sample_info$Sex == 'M'] = 1
 # temp_sample_info$Sex = as.numeric(temp_sample_info$Sex)
-# 
+#
 # ppcor::pcor.test(
 #   x = as.numeric(nutrition_expression_data["VitE_a_Toco", sample_info_IS$sample_id]),
-#   y = as.numeric(microbiome_expression_data["pHILIC_732.5525_5.1", sample_info_IS$sample_id]),
+#   y = as.numeric(metabolomics_expression_data["pHILIC_732.5525_5.1", sample_info_IS$sample_id]),
 #   z = temp_sample_info,
 #   method = "spearman"
 # )
-# 
-# unique(cor_data_IS$data_set2)
-# unique(cor_data_IS$data_set1)
+
+unique(cor_data_IS$data_set2)
+unique(cor_data_IS$data_set1)
 
 ######all metabolites
 all_cor =
@@ -381,6 +354,19 @@ all_p =
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
 
+###remove the diet all are zero
+remove_idx <- 
+  apply(all_cor, 1, function(x){
+    sum(x == 0)/ncol(all_cor)
+  }) %>% 
+  `>=`(0.9) %>% 
+  which()
+
+if(length(remove_idx) > 0){
+  all_cor <- all_cor[-remove_idx,]
+  all_p <- all_p[-remove_idx,]
+}
+
 
 normal_cor =
   cor_data_IS %>%
@@ -394,6 +380,46 @@ normal_p =
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
 
+###remove the diet all are zero
+remove_idx <- 
+  apply(normal_cor, 1, function(x){
+    sum(x == 0)/ncol(normal_cor)
+  }) %>% 
+  `>=`(0.9) %>% 
+  which()
+
+if(length(remove_idx) > 0){
+  normal_cor <- normal_cor[-remove_idx,]
+  normal_p <- normal_p[-remove_idx,]
+}
+
+
+all_cor =
+  cor_data %>%
+  dplyr::select(-c(p:p_adjust2)) %>%
+  tidyr::pivot_wider(names_from = data_set2, values_from = "cor") %>%
+  tibble::column_to_rownames(var = "data_set1")
+
+all_p =
+  cor_data %>%
+  dplyr::select(-c(p, p_adjust2, cor)) %>%
+  tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
+  tibble::column_to_rownames(var = "data_set1")
+
+
+  ###remove the diet all are zero
+remove_idx <- 
+apply(all_cor, 1, function(x){
+  sum(x == 0)/ncol(all_cor)
+}) %>% 
+  `>=`(0.9) %>% 
+  which()
+
+if(length(remove_idx) > 0){
+  all_cor <- all_cor[-remove_idx,]
+  all_p <- all_p[-remove_idx,]
+}
+
 predm_cor =
   cor_data_IR %>%
   dplyr::select(-c(p:p_adjust2)) %>%
@@ -406,10 +432,22 @@ predm_p =
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
 
-colnames(all_cor) =
+###remove the diet all are zero
+remove_idx <- 
+apply(predm_cor, 1, function(x){
+  sum(x == 0)/ncol(predm_cor)
+}) %>% 
+  `>=`(0.9) %>% 
+  which()
+
+if(length(remove_idx) > 0){
+  predm_cor <- predm_cor[-remove_idx,]
+  predm_p <- predm_p[-remove_idx,]
+}
+
 colnames(predm_cor) =
   colnames(normal_cor) =
-  microbiome_variable_info$variable_id[match(colnames(predm_cor), microbiome_variable_info$variable_id)]
+  metabolomics_variable_info$Metabolite[match(colnames(predm_cor), metabolomics_variable_info$variable_id)]
 
 library(ComplexHeatmap)
 library(circlize)
@@ -418,6 +456,8 @@ col_fun = circlize::colorRamp2(
   breaks = seq(-1, 1, length.out = 11),
   colors = rev(RColorBrewer::brewer.pal(n = 11, name = "BrBG"))
 )
+
+
 
 library(wesanderson)
 
@@ -457,11 +497,14 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "all_cor_all_metabolite.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "all_cor_all_metabolite.pdf",
+#        width = 10,
+#        height = 10)
 
+
+
+library(wesanderson)
 
 plot =
   Heatmap(
@@ -499,10 +542,10 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "IR_cor_all_metabolite.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "IR_cor_all_metabolite.pdf",
+#        width = 10,
+#        height = 10)
 
 plot =
   Heatmap(
@@ -541,10 +584,10 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "IS_cor_all_metabolite.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "IS_cor_all_metabolite.pdf",
+#        width = 10,
+#        height = 10)
 
 ######only show the metabolites with at least one significant correlation with nutrition
 ###remove the metabolites which have no significant cor (p_adjust > 0.2) with nutrition
@@ -570,22 +613,31 @@ remove_metabolite2 =
   dplyr::pull(data_set2)
 
 remove_metabolite =
-  intersect(intersect(remove_metabolite1, remove_metabolite2),
-  remove_metabolite3)
+  intersect(intersect(remove_metabolite1, remove_metabolite2), remove_metabolite3)
 
 length(remove_metabolite)
 
+
 all_cor =
-  cor_data %>%
+  cor_data_IS %>%
   dplyr::select(-c(p:p_adjust2)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "cor") %>%
   tibble::column_to_rownames(var = "data_set1")
 
 all_p =
-  cor_data %>%
+  cor_data_IS %>%
   dplyr::select(-c(p, p_adjust2, cor)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
+
+###remove the diet all are zero
+remove_idx <- 
+  apply(all_cor, 1, function(x){
+    sum(x == 0)/ncol(all_cor)
+  }) %>% 
+  `>=`(0.9) %>% 
+  which()
+
 
 normal_cor =
   cor_data_IS %>%
@@ -599,6 +651,19 @@ normal_p =
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
 
+###remove the diet all are zero
+remove_idx <- 
+  apply(normal_cor, 1, function(x){
+    sum(x == 0)/ncol(normal_cor)
+  }) %>% 
+  `>=`(0.9) %>% 
+  which()
+
+if(length(remove_idx) > 0){
+  normal_cor <- normal_cor[-remove_idx,]
+  normal_p <- normal_p[-remove_idx,]
+}
+
 predm_cor =
   cor_data_IR %>%
   dplyr::select(-c(p:p_adjust2)) %>%
@@ -610,6 +675,20 @@ predm_p =
   dplyr::select(-c(p, p_adjust2, cor)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
+
+
+###remove the diet all are zero
+remove_idx <- 
+  apply(predm_cor, 1, function(x){
+    sum(x == 0)/ncol(predm_cor)
+  }) %>% 
+  `>=`(0.9) %>% 
+  which()
+
+if(length(remove_idx) > 0){
+  predm_cor <- predm_cor[-remove_idx,]
+  predm_p <- predm_p[-remove_idx,]
+}
 
 ###remove the metabolites which we need to remove
 all_cor =
@@ -645,7 +724,7 @@ library(ComplexHeatmap)
 colnames(all_cor) =
 colnames(predm_cor) =
   colnames(normal_cor) =
-  microbiome_variable_info$variable_id[match(colnames(predm_cor), microbiome_variable_info$variable_id)]
+  metabolomics_variable_info$Metabolite[match(colnames(predm_cor), metabolomics_variable_info$variable_id)]
 
 library(circlize)
 
@@ -699,11 +778,10 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "all_cor.pdf",
-       width = 10,
-       height = 10)
-
+# ggsave(plot,
+#        filename = "all_cor.pdf",
+#        width = 10,
+#        height = 10)
 
 plot =
   Heatmap(
@@ -748,10 +826,10 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "IR_cor.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "IR_cor.pdf",
+#        width = 10,
+#        height = 10)
 
 plot =
   Heatmap(
@@ -796,42 +874,40 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "IS_cor.pdf",
-       width = 10,
-       height = 10)
-
-
+# ggsave(plot,
+#        filename = "IS_cor.pdf",
+#        width = 10,
+#        height = 10)
 
 temp_cor_is <-
   normal_cor  %>% 
-  tibble::rownames_to_column(var = "nutrition") %>%
-  tidyr::pivot_longer(cols = -nutrition, names_to = "microbiome", values_to = "cor")
+  tibble::rownames_to_column(var = "food_group") %>%
+  tidyr::pivot_longer(cols = -food_group, names_to = "metabolie", values_to = "cor")
 
 temp_p_is <-
   normal_p  %>% 
-  tibble::rownames_to_column(var = "nutrition") %>%
-  tidyr::pivot_longer(cols = -nutrition, names_to = "microbiome", values_to = "p")
+  tibble::rownames_to_column(var = "food_group") %>%
+  tidyr::pivot_longer(cols = -food_group, names_to = "metabolie", values_to = "p")
 
 
 temp_is <-
   temp_cor_is  %>% 
-  dplyr::left_join(temp_p_is, by = c("nutrition", "microbiome"))
+  dplyr::left_join(temp_p_is, by = c("food_group", "metabolie"))
 
 
 temp_cor_ir <-
   predm_cor  %>% 
-  tibble::rownames_to_column(var = "nutrition") %>%
-  tidyr::pivot_longer(cols = -nutrition, names_to = "microbiome", values_to = "cor")
+  tibble::rownames_to_column(var = "food_group") %>%
+  tidyr::pivot_longer(cols = -food_group, names_to = "metabolie", values_to = "cor")
 
 temp_p_ir <-
   predm_cor  %>% 
-  tibble::rownames_to_column(var = "nutrition") %>%
-  tidyr::pivot_longer(cols = -nutrition, names_to = "microbiome", values_to = "p")
+  tibble::rownames_to_column(var = "food_group") %>%
+  tidyr::pivot_longer(cols = -food_group, names_to = "metabolie", values_to = "p")
 
 temp_ir <-
   temp_cor_ir  %>% 
-  dplyr::left_join(temp_p_ir, by = c("nutrition", "microbiome"))
+  dplyr::left_join(temp_p_ir, by = c("food_group", "metabolie"))
 
 dim(temp_is)
 dim(temp_ir)
@@ -866,3 +942,248 @@ plot
 
 ggsave(plot, filename = "cor_density_comparison.pdf", 
        width = 8, height = 6)
+
+
+
+
+
+
+# ###pathway enrichment for metabolites for IR and IS
+# library(metpath)
+# ####IR metabolites
+# sum(cor_data_IR_output$p_adjust < 0.05)
+# 
+# idx <- which(cor_data_IR_output$p_adjust < 0.05)
+# hmdb_id <- cor_data_IR_output$HMDB[idx]
+# kegg_id <- cor_data_IR_output$KEGG[idx]
+# 
+# hmdb_id <-
+#   hmdb_id[hmdb_id != ""] %>%
+#   stringr::str_split("\\|") %>%
+#   unlist() %>%
+#   unique()
+# 
+# hmdb_id <-
+#   hmdb_id %>%
+#   purrr::map(function(x) {
+#     if (nchar(x) == 9) {
+#       x %>%
+#         stringr::str_replace("HMDB", "HMDB00")
+#     } else{
+#       x
+#     }
+#   }) %>%
+#   unlist()
+# 
+# hmdb_id <-
+#   hmdb_id[hmdb_id != ""]
+# 
+# kegg_id <-
+#   kegg_id[kegg_id != ""] %>%
+#   stringr::str_split("\\|") %>%
+#   unlist() %>%
+#   unique()
+# 
+# kegg_id <-
+#   kegg_id[kegg_id != ""]
+# 
+# ###HMDB
+# data("hmdb_pathway", package = "metpath")
+# ###Only remain the Metabolic;primary_pathway.
+# pathway_class =
+#   metpath::pathway_class(hmdb_pathway)
+# 
+# remain_idx = which(unlist(pathway_class) == "Metabolic;primary_pathway")
+# 
+# remain_idx
+# 
+# hmdb_pathway =
+#   hmdb_pathway[remain_idx]
+# 
+# # result_hmdb_ir =
+# #   enrich_hmdb(query_id = hmdb_id,
+# #               query_type = "compound",
+# #               id_type = "HMDB",
+# #               pathway_database = hmdb_pathway,
+# #               only_primary_pathway = TRUE,
+# #               p_cutoff = 0.05,
+# #               p_adjust_method = "BH",
+# #               threads = 3)
+# # 
+# # save(result_hmdb_ir, file = "result_hmdb_ir")
+# load("result_hmdb_ir")
+# 
+# write.csv(result_hmdb_ir@result, file = "result_hmdb_ir.csv", row.names = FALSE)
+# 
+# plot <-
+#   enrich_bar_plot(object = result_hmdb_ir,
+#                   x_axis = "p_value",
+#                   top = 10)
+# plot
+# ggsave(plot,
+#        filename = "enrichment_result_hmdb_ir.pdf",
+#        width = 7,
+#        height = 7)
+# 
+# ###KEGG
+# data("kegg_hsa_pathway", package = "metpath")
+# ###Only remain the Metabolic;primary_pathway.
+# pathway_class =
+#   metpath::pathway_class(kegg_hsa_pathway)
+# 
+# remain_idx =
+#   pathway_class %>%
+#   unlist() %>%
+#   stringr::str_detect("Disease") %>%
+#   `!`() %>%
+#   which()
+# 
+# remain_idx
+# 
+# kegg_hsa_pathway =
+#   kegg_hsa_pathway[remain_idx]
+# 
+# # result_kegg_ir =
+# #   enrich_kegg(query_id = kegg_id,
+# #               query_type = "compound",
+# #               id_type = "KEGG",
+# #               pathway_database = kegg_hsa_pathway,
+# #               p_cutoff = 0.05,
+# #               p_adjust_method = "BH",
+# #               threads = 3)
+# # 
+# # save(result_kegg_ir, file = "result_kegg_ir")
+# load("result_kegg_ir")
+# 
+# write.csv(result_kegg_ir@result, file = "result_kegg_ir.csv", row.names = FALSE)
+# 
+# plot <-
+#   enrich_bar_plot(object = result_kegg_ir,
+#                   x_axis = "p_value",
+#                   top = 10)
+# plot
+# ggsave(plot,
+#        filename = "enrichment_result_kegg_ir.pdf",
+#        width = 7,
+#        height = 7)
+# 
+# 
+# ####IS metabolites
+# sum(cor_data_IS_output$p_adjust < 0.05)
+# 
+# idx <- which(cor_data_IS_output$p_adjust < 0.05)
+# hmdb_id <- cor_data_IS_output$HMDB[idx]
+# kegg_id <- cor_data_IS_output$KEGG[idx]
+# 
+# hmdb_id <-
+#   hmdb_id[hmdb_id != ""] %>%
+#   stringr::str_split("\\|") %>%
+#   unlist() %>%
+#   unique()
+# 
+# hmdb_id <-
+#   hmdb_id[hmdb_id != ""]
+# 
+# hmdb_id <-
+#   hmdb_id %>%
+#   purrr::map(function(x) {
+#     if (nchar(x) == 9) {
+#       x %>%
+#         stringr::str_replace("HMDB", "HMDB00")
+#     } else{
+#       x
+#     }
+#   }) %>%
+#   unlist()
+# 
+# kegg_id <-
+#   kegg_id[kegg_id != ""] %>%
+#   stringr::str_split("\\|") %>%
+#   unlist() %>%
+#   unique()
+# 
+# kegg_id <-
+#   kegg_id[kegg_id != ""]
+# 
+# ###HMDB
+# data("hmdb_pathway", package = "metpath")
+# ###Only remain the Metabolic;primary_pathway.
+# pathway_class =
+#   metpath::pathway_class(hmdb_pathway)
+# 
+# remain_idx = which(unlist(pathway_class) == "Metabolic;primary_pathway")
+# 
+# remain_idx
+# 
+# hmdb_pathway =
+#   hmdb_pathway[remain_idx]
+# 
+# # result_hmdb_is =
+# #   enrich_hmdb(query_id = hmdb_id,
+# #               query_type = "compound",
+# #               id_type = "HMDB",
+# #               pathway_database = hmdb_pathway,
+# #               only_primary_pathway = TRUE,
+# #               p_cutoff = 0.05,
+# #               p_adjust_method = "BH",
+# #               threads = 3)
+# # 
+# # save(result_hmdb_is, file = "result_hmdb_is")
+# load("result_hmdb_is")
+# 
+# 
+# write.csv(result_hmdb_is@result, file = "result_hmdb_is.csv", row.names = FALSE)
+# 
+# plot <-
+#   enrich_bar_plot(object = result_hmdb_is,
+#                   x_axis = "p_value",
+#                   top = 10)
+# plot
+# ggsave(plot,
+#        filename = "enrichment_result_hmdb_is.pdf",
+#        width = 7,
+#        height = 7)
+# 
+# 
+# ###KEGG
+# data("kegg_hsa_pathway", package = "metpath")
+# ###Only remain the Metabolic;primary_pathway.
+# pathway_class =
+#   metpath::pathway_class(kegg_hsa_pathway)
+# 
+# remain_idx =
+#   pathway_class %>%
+#   unlist() %>%
+#   stringr::str_detect("Disease") %>%
+#   `!`() %>%
+#   which()
+# 
+# remain_idx
+# 
+# kegg_hsa_pathway =
+#   kegg_hsa_pathway[remain_idx]
+# 
+# # result_kegg_is =
+# #   enrich_kegg(query_id = kegg_id,
+# #               query_type = "compound",
+# #               id_type = "KEGG",
+# #               pathway_database = kegg_hsa_pathway,
+# #               p_cutoff = 0.05,
+# #               p_adjust_method = "BH",
+# #               threads = 3)
+# # 
+# # save(result_kegg_is, file = "result_kegg_is")
+# load("result_kegg_is")
+# 
+# write.csv(result_kegg_is@result, file = "result_kegg_is.csv", row.names = FALSE)
+# 
+# plot <-
+#   enrich_bar_plot(object = result_kegg_is,
+#                   x_axis = "p_value",
+#                   top = 10)
+# plot
+# ggsave(plot,
+#        filename = "enrichment_result_kegg_is.pdf",
+#        width = 7,
+#        height = 7)
+

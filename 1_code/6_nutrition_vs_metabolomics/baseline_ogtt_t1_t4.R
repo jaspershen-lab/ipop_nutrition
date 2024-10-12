@@ -3,14 +3,14 @@ setwd(r4projects::get_project_wd())
 library(tidyverse)
 library(plyr)
 rm(list = ls())
-source("1-code/tools.R")
+source("1_code/tools.R")
 
 ###load data
 {
   ##nutrition
-  load("3-data_analysis/nutrition_t1_t4/data_preparation/expression_data")
-  load("3-data_analysis/nutrition_t1_t4/data_preparation/sample_info")
-  load("3-data_analysis/nutrition_t1_t4/data_preparation/variable_info")
+  load("3_data_analysis/nutrition_t1_t4/data_preparation/expression_data")
+  load("3_data_analysis/nutrition_t1_t4/data_preparation/sample_info")
+  load("3_data_analysis/nutrition_t1_t4/data_preparation/variable_info")
   
   nutrition_expression_data = expression_data
   nutrition_sample_info = sample_info
@@ -37,11 +37,11 @@ source("1-code/tools.R")
   nutrition_expression_data <-
     nutrition_expression_data[nutrition_variable_info$variable_id,]
   
-  load("3-data_analysis/nutrition/data_preparation/sample_info")
+  load("3_data_analysis/nutrition/data_preparation/sample_info")
   
   nutrition_sample_info =
     nutrition_sample_info %>%
-    dplyr::left_join(sample_info[, c("subject_id", "a1c_t2d_status")], by = "subject_id")
+    dplyr::left_join(sample_info[, c("subject_id", "ogtt_t2d_status")], by = "subject_id")
   
   filter_subject_id =
     nutrition_sample_info %>%
@@ -57,26 +57,26 @@ source("1-code/tools.R")
   nutrition_expression_data =
     nutrition_expression_data[, nutrition_sample_info$sample_id]
   
-  ##microbiome
-  load("3-data_analysis/gut_microbiome/data_preparation/expression_data")
-  load("3-data_analysis/gut_microbiome/data_preparation/sample_info")
-  load("3-data_analysis/gut_microbiome/data_preparation/variable_info")
+  ##metabolomics
+  load("3_data_analysis/metabolomics/data_preparation/expression_data")
+  load("3_data_analysis/metabolomics/data_preparation/sample_info")
+  load("3_data_analysis/metabolomics/data_preparation/variable_info")
   
-  microbiome_expression_data = expression_data
-  microbiome_sample_info = sample_info
-  microbiome_variable_info = variable_info
+  metabolomics_expression_data = expression_data
+  metabolomics_sample_info = sample_info
+  metabolomics_variable_info = variable_info
 }
 
-dir.create("3-data_analysis/nutrition_vs_microbiome_t1_t4/based_on_a1c/")
-setwd("3-data_analysis/nutrition_vs_microbiome_t1_t4/based_on_a1c/")
+dir.create("3_data_analysis/nutrition_vs_metabolomics_t1_t4/based_on_ogtt/")
+setwd("3_data_analysis/nutrition_vs_metabolomics_t1_t4/based_on_ogtt/")
 
 ###data preparation
 nutrition_sample_info$Diet.Survey.Date
 nutrition_sample_info$CollectionDate
 
-####match microbiome data from baseline
-microbiome_sample_info =
-  microbiome_sample_info %>%
+####match metabolomics data from baseline
+metabolomics_sample_info =
+  metabolomics_sample_info %>%
   dplyr::mutate(CollectionDate = as.Date(CollectionDate, format = "%m/%d/%y"))
 
 matched_sample =
@@ -87,7 +87,7 @@ matched_sample =
     subject_id1 = x[2]
     date1 = as.Date(x[5])
     temp =
-      microbiome_sample_info %>%
+      metabolomics_sample_info %>%
       dplyr::filter(subject_id == subject_id1)
     temp %>%
       dplyr::mutate(diff_days = as.numeric(CollectionDate - date1)) %>%
@@ -124,8 +124,8 @@ matched_idx
 
 cbind(nutrition_sample_info[match(matched_idx$sample_id1, nutrition_sample_info$sample_id),
                             c("sample_id", "Diet.Survey.Date")],
-      microbiome_sample_info[match(matched_idx$sample_id2, microbiome_sample_info$sample_id),
-                             c("sample_id", "CollectionDate")])
+      metabolomics_sample_info[match(matched_idx$sample_id2, metabolomics_sample_info$sample_id),
+                               c("sample_id", "CollectionDate")])
 
 matched_idx =
   matched_idx %>%
@@ -152,23 +152,34 @@ nutrition_expression_data =
   nutrition_expression_data[, nutrition_sample_info$sample_id]
 
 nutrition_expression_data = nutrition_expression_data[, matched_idx$sample_id1]
-microbiome_expression_data = microbiome_expression_data[, matched_idx$sample_id2]
+metabolomics_expression_data = metabolomics_expression_data[, matched_idx$sample_id2]
 
 nutrition_sample_info =
   nutrition_sample_info[match(colnames(nutrition_expression_data),
                               nutrition_sample_info$sample_id), ]
 
-microbiome_sample_info =
-  microbiome_sample_info[match(colnames(microbiome_expression_data),
-                               microbiome_sample_info$sample_id), ]
+metabolomics_sample_info =
+  metabolomics_sample_info[match(colnames(metabolomics_expression_data),
+                                 metabolomics_sample_info$sample_id), ]
 
 dim(nutrition_expression_data)
-dim(microbiome_expression_data)
+dim(metabolomics_expression_data)
 
-colnames(microbiome_expression_data) =
+colnames(metabolomics_expression_data) =
   colnames(nutrition_expression_data)
 
 ######calculate the correlation between nutrition and metabolites
+metabolomics_expression_data =
+  log(metabolomics_expression_data + 1, 2)
+
+metabolomics_expression_data =
+  metabolomics_expression_data %>%
+  apply(1, function(x) {
+    (x) / sd(x)
+  }) %>%
+  t() %>%
+  as.data.frame()
+
 ####missing value
 nutrition_expression_data %>%
   apply(1, function(x) {
@@ -192,7 +203,7 @@ nutrition_expression_data =
   as.data.frame()
 
 range(nutrition_expression_data)
-range(microbiome_expression_data)
+range(metabolomics_expression_data)
 
 ###############################################################################
 ####based on the ogtt status
@@ -200,18 +211,19 @@ range(microbiome_expression_data)
 ###cor_data for IS people
 sample_info_normal =
   nutrition_sample_info %>%
-  dplyr::filter(!is.na(a1c_t2d_status)) %>%
-  dplyr::filter(a1c_t2d_status == "Normal")
+  dplyr::filter(!is.na(ogtt_t2d_status)) %>%
+  dplyr::filter(ogtt_t2d_status == "Normal")
 
 sample_info_predm =
   nutrition_sample_info %>%
-  dplyr::filter(!is.na(a1c_t2d_status)) %>%
-  dplyr::filter(a1c_t2d_status == "preDM" | a1c_t2d_status == "T2D")
+  dplyr::filter(!is.na(ogtt_t2d_status)) %>%
+  dplyr::filter(ogtt_t2d_status == "preDM" |
+                  ogtt_t2d_status == "T2D")
 
 # cor_data_IS =
 #   partial_cor_pattern(
 #     data_set1 = nutrition_expression_data[, sample_info_normal$sample_id],
-#     data_set2 = microbiome_expression_data[, sample_info_normal$sample_id],
+#     data_set2 = metabolomics_expression_data[, sample_info_normal$sample_id],
 #     sample_info = sample_info_normal,
 #     method = "spearman",
 #     threads = 5
@@ -220,7 +232,7 @@ sample_info_predm =
 # cor_data_IR =
 #   partial_cor_pattern(
 #     data_set1 = nutrition_expression_data[, sample_info_predm$sample_id],
-#     data_set2 = microbiome_expression_data[, sample_info_predm$sample_id],
+#     data_set2 = metabolomics_expression_data[, sample_info_predm$sample_id],
 #     sample_info = sample_info_predm,
 #     method = "spearman",
 #     threads = 5
@@ -242,21 +254,21 @@ which(cor_data_IS$p_adjust < 0.05)
 # which(cor_data_IS$p_adjust < 0.2)
 
 ####output results
-# library(openxlsx)
-# cor_data_IS_output =
-#   cor_data_IS %>%
-#   dplyr::filter(p_adjust < 0.05) %>%
-#   dplyr::left_join(microbiome_variable_info, by = c("data_set2" = "variable_id")) %>%
-#   dplyr::select(-p_adjust2) %>%
-#   dplyr::arrange(p_adjust)
-# 
-# cor_data_IR_output =
-#   cor_data_IR %>%
-#   dplyr::filter(p_adjust < 0.05) %>%
-#   dplyr::left_join(microbiome_variable_info, by = c("data_set2" = "variable_id")) %>%
-#   dplyr::select(-p_adjust2) %>%
-#   dplyr::arrange(p_adjust)
-# 
+library(openxlsx)
+cor_data_IS_output =
+  cor_data_IS %>%
+  dplyr::filter(p_adjust < 0.05) %>%
+  dplyr::left_join(metabolomics_variable_info, by = c("data_set2" = "variable_id")) %>%
+  dplyr::select(-p_adjust2) %>%
+  dplyr::arrange(p_adjust)
+
+cor_data_IR_output =
+  cor_data_IR %>%
+  dplyr::filter(p_adjust < 0.05) %>%
+  dplyr::left_join(metabolomics_variable_info, by = c("data_set2" = "variable_id")) %>%
+  dplyr::select(-p_adjust2) %>%
+  dplyr::arrange(p_adjust)
+
 # openxlsx::write.xlsx(
 #   cor_data_IS_output,
 #   "cor_data_IS_output.xlsx",
@@ -277,7 +289,7 @@ idx = which(cor_data_IR$p_adjust < 0.05)
 # for(i in idx) {
 # cat(i, " ")
 #   x = as.numeric(nutrition_expression_data[cor_data_IR$data_set1[i],])
-#   y = as.numeric(microbiome_expression_data[cor_data_IR$data_set2[i],])
+#   y = as.numeric(metabolomics_expression_data[cor_data_IR$data_set2[i],])
 #   data.frame(x, y) %>%
 #     ggplot(aes(x,y)) +
 #     geom_point()
@@ -287,8 +299,10 @@ cor_data_IR %>%
   dplyr::arrange(desc(abs(cor))) %>%
   head()
 
-plot(as.numeric(nutrition_expression_data["VitC", sample_info_predm$sample_id]),
-     as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_predm$sample_id]))
+plot(
+  as.numeric(nutrition_expression_data["VitC", sample_info_predm$sample_id]),
+  as.numeric(metabolomics_expression_data["nRPLC_441.3947_11.3", sample_info_predm$sample_id])
+)
 
 abline(0, -1)
 
@@ -296,14 +310,16 @@ cor_data_IS %>%
   dplyr::arrange(desc(abs(cor))) %>%
   head()
 
-plot(as.numeric(nutrition_expression_data["VitC", sample_info_normal$sample_id]),
-     as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_normal$sample_id]))
+plot(
+  as.numeric(nutrition_expression_data["VitC", sample_info_normal$sample_id]),
+  as.numeric(metabolomics_expression_data["nRPLC_441.3947_11.3", sample_info_normal$sample_id])
+)
 
 abline(0, -1)
 
 cor(
   as.numeric(nutrition_expression_data["VitC", sample_info_normal$sample_id]),
-  as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_normal$sample_id]),
+  as.numeric(metabolomics_expression_data["nRPLC_441.3947_11.3", sample_info_normal$sample_id]),
   method = "spearman"
 )
 
@@ -316,7 +332,7 @@ temp_sample_info$Sex = as.numeric(temp_sample_info$Sex)
 
 ppcor::pcor.test(
   x = as.numeric(nutrition_expression_data["VitE_a_Toco", sample_info_normal$sample_id]),
-  y = as.numeric(microbiome_expression_data["pHILIC_732.5525_5.1", sample_info_normal$sample_id]),
+  y = as.numeric(metabolomics_expression_data["pHILIC_732.5525_5.1", sample_info_normal$sample_id]),
   z = temp_sample_info,
   method = "spearman"
 )
@@ -351,7 +367,7 @@ predm_p =
 
 colnames(predm_cor) =
   colnames(normal_cor) =
-  microbiome_variable_info$Metabolite[match(colnames(predm_cor), microbiome_variable_info$variable_id)]
+  metabolomics_variable_info$Metabolite[match(colnames(predm_cor), metabolomics_variable_info$variable_id)]
 
 library(ComplexHeatmap)
 library(circlize)
@@ -516,7 +532,7 @@ library(ComplexHeatmap)
 
 colnames(predm_cor) =
   colnames(normal_cor) =
-  microbiome_variable_info$Metabolite[match(colnames(predm_cor), microbiome_variable_info$variable_id)]
+  metabolomics_variable_info$Metabolite[match(colnames(predm_cor), metabolomics_variable_info$variable_id)]
 
 library(circlize)
 

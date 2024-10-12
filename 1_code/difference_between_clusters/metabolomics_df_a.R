@@ -3,14 +3,14 @@ setwd(r4projects::get_project_wd())
 library(tidyverse)
 library(plyr)
 rm(list = ls())
-source("1-code/tools.R")
+source("1_code/tools.R")
 
 ###load data
 {
   ##metabolome
-  load("3-data_analysis/metabolomics/data_preparation/expression_data")
-  load("3-data_analysis/metabolomics/data_preparation/sample_info")
-  load("3-data_analysis/metabolomics/data_preparation/variable_info")
+  load("3_data_analysis/metabolomics/data_preparation/expression_data")
+  load("3_data_analysis/metabolomics/data_preparation/sample_info")
+  load("3_data_analysis/metabolomics/data_preparation/variable_info")
   
   metabolomics_expression_data = expression_data
   metabolomics_sample_info = sample_info
@@ -47,8 +47,8 @@ object =
 object %>%
   extract_sample_info()
 
-dir.create("3-data_analysis/metabolomics/different_metabolomics_dfa")
-setwd("3-data_analysis/metabolomics/different_metabolomics_dfa")
+dir.create("3_data_analysis/metabolomics/different_metabolomics_dfa")
+setwd("3_data_analysis/metabolomics/different_metabolomics_dfa")
 
 ###find markers
 object %>%

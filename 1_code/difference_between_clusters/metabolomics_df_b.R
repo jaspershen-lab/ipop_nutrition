@@ -3,14 +3,14 @@ setwd(r4projects::get_project_wd())
 library(tidyverse)
 library(plyr)
 rm(list = ls())
-source("1-code/tools.R")
+source("1_code/tools.R")
 
 ###load data
 {
   ##metabolome
-  load("3-data_analysis/metabolomics/data_preparation/expression_data")
-  load("3-data_analysis/metabolomics/data_preparation/sample_info")
-  load("3-data_analysis/metabolomics/data_preparation/variable_info")
+  load("3_data_analysis/metabolomics/data_preparation/expression_data")
+  load("3_data_analysis/metabolomics/data_preparation/sample_info")
+  load("3_data_analysis/metabolomics/data_preparation/variable_info")
   
   metabolomics_expression_data = expression_data
   metabolomics_sample_info = sample_info
@@ -21,8 +21,8 @@ df_b = readr::read_csv("2-data/DF_B_Energy.csv")
 df_a = readr::read_csv("2-data/DF_A_Energy_SampleID.csv")
 
 
-dir.create("3-data_analysis/metabolomics/different_metabolomics_dfb")
-setwd("3-data_analysis/metabolomics/different_metabolomics_dfb")
+dir.create("3_data_analysis/metabolomics/different_metabolomics_dfb")
+setwd("3_data_analysis/metabolomics/different_metabolomics_dfb")
 
 expression_data =
   df_b$subjectid %>%

@@ -3,14 +3,14 @@ setwd(r4projects::get_project_wd())
 library(tidyverse)
 library(plyr)
 rm(list = ls())
-source("1-code/tools.R")
+source("1_code/tools.R")
 
 ###load data
 {
   ##nutrition
-  load("3-data_analysis/food_group/data_preparation/expression_data")
-  load("3-data_analysis/food_group/data_preparation/sample_info")
-  load("3-data_analysis/food_group/data_preparation/variable_info")
+  load("3_data_analysis/food_group/data_preparation/expression_data")
+  load("3_data_analysis/food_group/data_preparation/sample_info")
+  load("3_data_analysis/food_group/data_preparation/variable_info")
   
   nutrition_expression_data = expression_data
   nutrition_sample_info = sample_info
@@ -31,28 +31,18 @@ source("1-code/tools.R")
     nutrition_expression_data[, nutrition_sample_info$sample_id]
   
   ##microbiome
-  load("3-data_analysis/gut_microbiome/data_preparation/expression_data")
-  load("3-data_analysis/gut_microbiome/data_preparation/sample_info")
-  load("3-data_analysis/gut_microbiome/data_preparation/variable_info")
+  load("3_data_analysis/gut_microbiome/data_preparation/expression_data")
+  load("3_data_analysis/gut_microbiome/data_preparation/sample_info")
+  load("3_data_analysis/gut_microbiome/data_preparation/variable_info")
   
   microbiome_expression_data = expression_data
   microbiome_sample_info = sample_info
   microbiome_variable_info = variable_info
 }
 
-df_a <-
-  readr::read_csv("2-data/DF_A_Energy_SampleID (1)_with_DC.csv")
-df_a <-
-  df_a %>%
-  dplyr::select(SubjectID, Participant.ID, cluster_801) %>%
-  dplyr::distinct(SubjectID, .keep_all = TRUE)
-
-
-dir.create(
-  "3-data_analysis/1-food_group_vs_microbiome_t1_t4/based_on_cluster801/",
-  recursive = TRUE
-)
-setwd("3-data_analysis/1-food_group_vs_microbiome_t1_t4/based_on_cluster801/")
+dir.create("3_data_analysis/1_food_group_vs_microbiome_t1_t4/based_on_sspg/",
+           recursive = TRUE)
+setwd("3_data_analysis/1_food_group_vs_microbiome_t1_t4/based_on_sspg/")
 
 ###data preparation
 nutrition_sample_info$Diet.Survey.Date
@@ -192,20 +182,18 @@ range(nutrition_expression_data)
 range(microbiome_expression_data)
 
 ###############################################################################
-####based on the cluster801 status
+####based on the sspg status
 ####calculate the correlation between them
-###cor_data for cluster0 people
-sample_info_cluster0 =
+###cor_data for IS people
+sample_info_IS =
   nutrition_sample_info %>%
-  dplyr::left_join(df_a, by = c("subject_id" = "SubjectID")) %>%
-  dplyr::filter(!is.na(cluster_801)) %>%
-  dplyr::filter(cluster_801 == "0")
+  dplyr::filter(!is.na(sspg_status)) %>%
+  dplyr::filter(sspg_status == "IS")
 
-sample_info_cluster1 =
+sample_info_IR =
   nutrition_sample_info %>%
-  dplyr::left_join(df_a, by = c("subject_id" = "SubjectID")) %>%
-  dplyr::filter(!is.na(cluster_801)) %>%
-  dplyr::filter(cluster_801 == "1")
+  dplyr::filter(!is.na(sspg_status)) %>%
+  dplyr::filter(sspg_status == "IR")
 
 # cor_data =
 #   partial_cor_pattern(
@@ -216,46 +204,46 @@ sample_info_cluster1 =
 #     threads = 5
 #   )
 #
-# cor_data_cluster0 =
+# cor_data_IS =
 #   partial_cor_pattern(
-#     data_set1 = nutrition_expression_data[, sample_info_cluster0$sample_id],
-#     data_set2 = microbiome_expression_data[, sample_info_cluster0$sample_id],
-#     sample_info = sample_info_cluster0,
+#     data_set1 = nutrition_expression_data[, sample_info_IS$sample_id],
+#     data_set2 = microbiome_expression_data[, sample_info_IS$sample_id],
+#     sample_info = sample_info_IS,
 #     method = "spearman",
 #     threads = 5
 #   )
 #
-# cor_data_cluster1 =
+# cor_data_IR =
 #   partial_cor_pattern(
-#     data_set1 = nutrition_expression_data[, sample_info_cluster1$sample_id],
-#     data_set2 = microbiome_expression_data[, sample_info_cluster1$sample_id],
-#     sample_info = sample_info_cluster1,
+#     data_set1 = nutrition_expression_data[, sample_info_IR$sample_id],
+#     data_set2 = microbiome_expression_data[, sample_info_IR$sample_id],
+#     sample_info = sample_info_IR,
 #     method = "spearman",
 #     threads = 5
 #   )
 # save(cor_data, file = "cor_data")
-# save(cor_data_cluster0, file = "cor_data_cluster0")
-# save(cor_data_cluster1, file = "cor_data_cluster1")
+# save(cor_data_IS, file = "cor_data_IS")
+# save(cor_data_IR, file = "cor_data_IR")
 
 load("cor_data")
-load("cor_data_cluster0")
-load("cor_data_cluster1")
+load("cor_data_IS")
+load("cor_data_IR")
 
-head(cor_data_cluster1)
-head(cor_data_cluster0)
+head(cor_data_IR)
+head(cor_data_IS)
 
-plot(cor_data_cluster1$cor, cor_data_cluster0$cor)
+plot(cor_data_IR$cor, cor_data_IS$cor)
 
 dim(cor_data)
-dim(cor_data_cluster0)
-dim(cor_data_cluster1)
+dim(cor_data_IS)
+dim(cor_data_IR)
 
 which(cor_data$p_adjust < 0.05)
-which(cor_data_cluster1$p_adjust < 0.05)
-which(cor_data_cluster0$p_adjust < 0.05)
+which(cor_data_IR$p_adjust < 0.05)
+which(cor_data_IS$p_adjust < 0.05)
 
-# which(cor_data_cluster1$p_adjust < 0.2)
-# which(cor_data_cluster0$p_adjust < 0.2)
+# which(cor_data_IR$p_adjust < 0.2)
+# which(cor_data_IS$p_adjust < 0.2)
 
 ####output results
 library(openxlsx)
@@ -266,112 +254,114 @@ cor_data_output =
   dplyr::select(-p_adjust2) %>%
   dplyr::arrange(p_adjust)
 
-cor_data_cluster0_output =
-  cor_data_cluster0 %>%
+cor_data_IS_output =
+  cor_data_IS %>%
   dplyr::filter(p_adjust < 0.05) %>%
   dplyr::left_join(microbiome_variable_info, by = c("data_set2" = "variable_id")) %>%
   dplyr::select(-p_adjust2) %>%
   dplyr::arrange(p_adjust)
 
-cor_data_cluster1_output =
-  cor_data_cluster1 %>%
+cor_data_IR_output =
+  cor_data_IR %>%
   dplyr::filter(p_adjust < 0.05) %>%
   dplyr::left_join(microbiome_variable_info, by = c("data_set2" = "variable_id")) %>%
   dplyr::select(-p_adjust2) %>%
   dplyr::arrange(p_adjust)
 
 
-openxlsx::write.xlsx(cor_data_output,
-                     "cor_data_output.xlsx",
-                     asTable = TRUE,
-                     overwrite = TRUE)
-openxlsx::write.xlsx(
-  cor_data_cluster0_output,
-  "cor_data_cluster0_output.xlsx",
-  asTable = TRUE,
-  overwrite = TRUE
-)
-
-openxlsx::write.xlsx(
-  cor_data_cluster1_output,
-  "cor_data_cluster1_output.xlsx",
-  asTable = TRUE,
-  overwrite = TRUE
-)
+# openxlsx::write.xlsx(
+#   cor_data_output,
+#   "cor_data_output.xlsx",
+#   asTable = TRUE,
+#   overwrite = TRUE
+# )
+# openxlsx::write.xlsx(
+#   cor_data_IS_output,
+#   "cor_data_IS_output.xlsx",
+#   asTable = TRUE,
+#   overwrite = TRUE
+# )
+#
+# openxlsx::write.xlsx(
+#   cor_data_IR_output,
+#   "cor_data_IR_output.xlsx",
+#   asTable = TRUE,
+#   overwrite = TRUE
+# )
 
 data1 =
-  cor_data_cluster0_output %>%
+  cor_data_IS_output %>%
   dplyr::filter(p_adjust < 0.05) %>%
   dplyr::arrange(data_set1) %>%
-  dplyr::mutate(class = "Cluster 0")
+  dplyr::mutate(class = "IS")
 
 data2 =
-  cor_data_cluster1_output %>%
+  cor_data_IR_output %>%
   dplyr::filter(p_adjust < 0.05) %>%
   dplyr::arrange(data_set1) %>%
-  dplyr::mutate(class = "Cluster 1")
+  dplyr::mutate(class = "IR")
 
 data =
   rbind(data1, data2) %>%
   dplyr::arrange(data_set1)
 
 openxlsx::write.xlsx(data,
-                     file = "significant_cor_cluster0_1.xlsx",
+                     file = "significant_cor_IR_IS.xlsx",
                      asTable = TRUE,
                      overwrite = TRUE)
 
 #####output the cor plot
-idx = which(cor_data_cluster1$p_adjust < 0.05)
+idx = which(cor_data_IR$p_adjust < 0.05)
 
 # for (i in idx) {
 #   cat(i, " ")
-#   x = as.numeric(nutrition_expression_data[cor_data_cluster1$data_set1[i], ])
-#   y = as.numeric(microbiome_expression_data[cor_data_cluster1$data_set2[i], ])
+#   x = as.numeric(nutrition_expression_data[cor_data_IR$data_set1[i], ])
+#   y = as.numeric(microbiome_expression_data[cor_data_IR$data_set2[i], ])
 #   data.frame(x, y) %>%
 #     ggplot(aes(x, y)) +
 #     geom_point()
 # }
 
-cor_data_cluster1 %>%
+cor_data_IR %>%
   dplyr::arrange(desc(abs(cor))) %>%
   head()
 
-# plot(as.numeric(nutrition_expression_data["VitC", sample_info_cluster1$sample_id]),
-#      as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_cluster1$sample_id]))
+# plot(as.numeric(nutrition_expression_data["VitC", sample_info_IR$sample_id]),
+#      as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_IR$sample_id]))
 
 # abline(0, -1)
 
-cor_data_cluster0 %>%
+cor_data_IS %>%
   dplyr::arrange(desc(abs(cor))) %>%
   head()
 
-# plot(as.numeric(nutrition_expression_data["VitC", sample_info_cluster0$sample_id]),
-#      as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_cluster0$sample_id]))
+# plot(as.numeric(nutrition_expression_data["VitC", sample_info_IS$sample_id]),
+#      as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_IS$sample_id]))
 
 # abline(0, -1)
 
-# cor(
-#   as.numeric(nutrition_expression_data["VitC", sample_info_cluster0$sample_id]),
-#   as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_cluster0$sample_id]),
-#   method = "spearman"
-# )
+cor(
+  as.numeric(nutrition_expression_data["VitC", sample_info_IS$sample_id]),
+  as.numeric(microbiome_expression_data["nRPLC_441.3947_11.3", sample_info_IS$sample_id]),
+  method = "spearman"
+)
 
 # temp_sample_info =
-#   sample_info_cluster0[, c("Sex", "Age")]
+#   sample_info_IS[, c("Sex", "Age")]
 
 # temp_sample_info$Sex[temp_sample_info$Sex == 'F'] = 0
 # temp_sample_info$Sex[temp_sample_info$Sex == 'M'] = 1
 # temp_sample_info$Sex = as.numeric(temp_sample_info$Sex)
 
 # ppcor::pcor.test(
-#   x = as.numeric(nutrition_expression_data["VitE_a_Toco", sample_info_cluster0$sample_id]),
-#   y = as.numeric(microbiome_expression_data["pHILIC_732.5525_5.1", sample_info_cluster0$sample_id]),
+#   x = as.numeric(nutrition_expression_data["VitE_a_Toco", sample_info_IS$sample_id]),
+#   y = as.numeric(microbiome_expression_data["pHILIC_732.5525_5.1", sample_info_IS$sample_id]),
 #   z = temp_sample_info,
 #   method = "spearman"
 # )
 
-unique(cor_data_cluster0$data_set2)
-unique(cor_data_cluster0$data_set1)
+unique(cor_data_IS$data_set2)
+unique(cor_data_IS$data_set1)
 
 ######all metabolites
 ###all participants
@@ -400,63 +390,62 @@ if (length(remove_idx) > 0) {
   all_p <- all_p[-remove_idx, ]
 }
 
-####normal people, cluster0 people
-cluster0_cor =
-  cor_data_cluster0 %>%
+####normal people, IS people
+normal_cor =
+  cor_data_IS %>%
   dplyr::select(-c(p:p_adjust2)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "cor") %>%
   tibble::column_to_rownames(var = "data_set1")
 
-cluster0_p =
-  cor_data_cluster0 %>%
+normal_p =
+  cor_data_IS %>%
   dplyr::select(-c(p, p_adjust2, cor)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
 
 ###remove the diet all are zero
 remove_idx <-
-  apply(cluster0_cor, 1, function(x) {
-    sum(x == 0) / ncol(cluster0_cor)
+  apply(normal_cor, 1, function(x) {
+    sum(x == 0) / ncol(normal_cor)
   }) %>%
   `>=`(0.9) %>%
   which()
 
 if (length(remove_idx) > 0) {
-  cluster0_cor <- cluster0_cor[-remove_idx, ]
-  cluster0_p <- cluster0_p[-remove_idx, ]
+  normal_cor <- normal_cor[-remove_idx, ]
+  normal_p <- normal_p[-remove_idx, ]
 }
 
-####prediabetes, cluster1 people
-cluster1_cor =
-  cor_data_cluster1 %>%
+####prediabetes, IR people
+predm_cor =
+  cor_data_IR %>%
   dplyr::select(-c(p:p_adjust2)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "cor") %>%
   tibble::column_to_rownames(var = "data_set1")
 
-cluster1_p =
-  cor_data_cluster1 %>%
+predm_p =
+  cor_data_IR %>%
   dplyr::select(-c(p, p_adjust2, cor)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
 
 ###remove the diet all are zero
 remove_idx <-
-  apply(cluster1_cor, 1, function(x) {
-    sum(x == 0) / ncol(cluster1_cor)
+  apply(predm_cor, 1, function(x) {
+    sum(x == 0) / ncol(predm_cor)
   }) %>%
   `>=`(0.9) %>%
   which()
 
 if (length(remove_idx) > 0) {
-  cluster1_cor <- cluster1_cor[-remove_idx, ]
-  cluster1_p <- cluster1_p[-remove_idx, ]
+  predm_cor <- predm_cor[-remove_idx, ]
+  predm_p <- predm_p[-remove_idx, ]
 }
 
 colnames(all_cor) =
-  colnames(cluster1_cor) =
-  colnames(cluster0_cor) =
-  microbiome_variable_info$variable_id[match(colnames(cluster1_cor),
-                                             microbiome_variable_info$variable_id)]
+  colnames(predm_cor) =
+  colnames(normal_cor) =
+  microbiome_variable_info$variable_id[match(colnames(predm_cor), microbiome_variable_info$variable_id)]
 
 library(ComplexHeatmap)
 library(circlize)
@@ -470,7 +459,7 @@ library(wesanderson)
 
 plot =
   Heatmap(
-    t(cluster1_cor),
+    t(predm_cor),
     col = col_fun,
     border = TRUE,
     show_column_dend = TRUE,
@@ -492,11 +481,11 @@ plot =
       gb2 = textGrob(".")
       gb_w2 = convertWidth(grobWidth(gb2), "mm")
       gb_h2 = convertHeight(grobHeight(gb2), "mm")
-      if (t(cluster1_p)[i, j] < 0.05) {
+      if (t(predm_p)[i, j] < 0.05) {
         grid.text("*", x, y - gb_h1 * 0.5 + gb_w1 * 0.4, gp = gpar(col = "red"))
       }
       
-      # if (t(cluster1_p)[i, j] > 0.05 & t(cluster1_p)[i, j] < 0.2) {
+      # if (t(predm_p)[i, j] > 0.05 & t(predm_p)[i, j] < 0.2) {
       #   grid.points(pch = 20, x = x, y = y, size = unit(0.3, "char"), gp = gpar(col = "red"))
       # }
     }
@@ -504,15 +493,14 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-
-ggsave(plot,
-       filename = "cluster1_cor_all_metabolite.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "IR_cor_all_metabolite.pdf",
+#        width = 10,
+#        height = 10)
 
 plot <-
   Heatmap(
-    t(cluster0_cor),
+    t(normal_cor),
     col = col_fun,
     border = TRUE,
     show_column_dend = TRUE,
@@ -534,11 +522,11 @@ plot <-
       gb2 = textGrob(".")
       gb_w2 = convertWidth(grobWidth(gb2), "mm")
       gb_h2 = convertHeight(grobHeight(gb2), "mm")
-      if (t(cluster0_p)[i, j] < 0.05) {
+      if (t(normal_p)[i, j] < 0.05) {
         grid.text("*", x, y - gb_h1 * 0.5 + gb_w1 * 0.4, gp = gpar(col = "red"))
       }
       
-      # if (t(cluster0_p)[i, j] > 0.05 & t(cluster0_p)[i, j] < 0.2) {
+      # if (t(normal_p)[i, j] > 0.05 & t(normal_p)[i, j] < 0.2) {
       #   grid.points(pch = 20, x = x, y = y, size = unit(0.3, "char"), gp = gpar(col = "red"))
       #   # grid.text(label = ".", x = x, y - gb_h2 * 0.5 + gb_w1 * 0.4)
       # }
@@ -547,10 +535,10 @@ plot <-
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "cluster0_cor_all_metabolite.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "IS_cor_all_metabolite.pdf",
+#        width = 10,
+#        height = 10)
 
 
 
@@ -591,22 +579,22 @@ plot <-
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "all_cor_all_metabolite.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "all_cor_all_metabolite.pdf",
+#        width = 10,
+#        height = 10)
 
 ######only show the metabolites with at least one significant correlation with nutrition
 ###remove the metabolites which have no significant cor (p_adjust > 0.2) with nutrition
 remove_metabolite1 =
-  cor_data_cluster0 %>%
+  cor_data_IS %>%
   dplyr::group_by(data_set2) %>%
   dplyr::summarise(n = sum(p_adjust < 0.05)) %>%
   dplyr::filter(n == 0) %>%
   dplyr::pull(data_set2)
 
 remove_metabolite2 =
-  cor_data_cluster1 %>%
+  cor_data_IR %>%
   dplyr::group_by(data_set2) %>%
   dplyr::summarise(n = sum(p_adjust < 0.05)) %>%
   dplyr::filter(n == 0) %>%
@@ -626,7 +614,7 @@ remove_metabolite =
 length(remove_metabolite)
 
 
-####all participants, cluster0 people
+####all participants, IS people
 all_cor =
   cor_data %>%
   dplyr::select(-c(p:p_adjust2)) %>%
@@ -652,56 +640,60 @@ if (length(remove_idx) > 0) {
   all_p <- all_p[-remove_idx, ]
 }
 
-####normal participants, cluster0 people
-cluster0_cor =
-  cor_data_cluster0 %>%
+####normal participants, IS people
+normal_cor =
+  cor_data_IS %>%
   dplyr::select(-c(p:p_adjust2)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "cor") %>%
   tibble::column_to_rownames(var = "data_set1")
 
-cluster0_p =
-  cor_data_cluster0 %>%
+normal_p =
+  cor_data_IS %>%
   dplyr::select(-c(p, p_adjust2, cor)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
 
 ###remove the diet all are zero
 remove_idx <-
-  apply(cluster0_cor, 1, function(x) {
-    sum(x == 0) / ncol(cluster0_cor)
+  apply(normal_cor, 1, function(x) {
+    sum(x == 0) / ncol(normal_cor)
   }) %>%
   `>=`(0.9) %>%
   which()
 
 if (length(remove_idx) > 0) {
-  cluster0_cor <- cluster0_cor[-remove_idx, ]
-  cluster0_p <- cluster0_p[-remove_idx, ]
+  normal_cor <- normal_cor[-remove_idx, ]
+  normal_p <- normal_p[-remove_idx, ]
 }
 
-cluster1_cor =
-  cor_data_cluster1 %>%
+
+predm_cor =
+  cor_data_IR %>%
   dplyr::select(-c(p:p_adjust2)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "cor") %>%
   tibble::column_to_rownames(var = "data_set1")
 
-cluster1_p =
-  cor_data_cluster1 %>%
+predm_p =
+  cor_data_IR %>%
   dplyr::select(-c(p, p_adjust2, cor)) %>%
   tidyr::pivot_wider(names_from = data_set2, values_from = "p_adjust") %>%
   tibble::column_to_rownames(var = "data_set1")
 
+
+
 ###remove the diet all are zero
 remove_idx <-
-  apply(cluster1_cor, 1, function(x) {
-    sum(x == 0) / ncol(cluster1_cor)
+  apply(predm_cor, 1, function(x) {
+    sum(x == 0) / ncol(predm_cor)
   }) %>%
   `>=`(0.9) %>%
   which()
 
 if (length(remove_idx) > 0) {
-  cluster1_cor <- cluster1_cor[-remove_idx, ]
-  cluster1_p <- cluster1_p[-remove_idx, ]
+  predm_cor <- predm_cor[-remove_idx, ]
+  predm_p <- predm_p[-remove_idx, ]
 }
+
 
 ###remove the metabolites which we need to remove
 all_cor =
@@ -712,35 +704,34 @@ all_p =
   all_p %>%
   dplyr::select(-remove_metabolite)
 
-cluster0_cor =
-  cluster0_cor %>%
+normal_cor =
+  normal_cor %>%
   dplyr::select(-remove_metabolite)
 
-cluster0_p =
-  cluster0_p %>%
+normal_p =
+  normal_p %>%
   dplyr::select(-remove_metabolite)
 
-cluster1_cor =
-  cluster1_cor %>%
+predm_cor =
+  predm_cor %>%
   dplyr::select(-remove_metabolite)
 
-cluster1_p =
-  cluster1_p %>%
+predm_p =
+  predm_p %>%
   dplyr::select(-remove_metabolite)
 
 colnames(all_cor)
 
-colnames(cluster0_cor)
+colnames(normal_cor)
 
-colnames(cluster1_cor)
+colnames(predm_cor)
 
 library(ComplexHeatmap)
 
 colnames(all_cor) =
-  colnames(cluster1_cor) =
-  colnames(cluster0_cor) =
-  microbiome_variable_info$variable_id[match(colnames(cluster1_cor),
-                                             microbiome_variable_info$variable_id)]
+  colnames(predm_cor) =
+  colnames(normal_cor) =
+  microbiome_variable_info$variable_id[match(colnames(predm_cor), microbiome_variable_info$variable_id)]
 
 library(circlize)
 
@@ -794,14 +785,15 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "all_cor.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "all_cor.pdf",
+#        width = 10,
+#        height = 10)
+
 
 plot =
   Heatmap(
-    t(cluster1_cor),
+    t(predm_cor),
     col = col_fun,
     border = TRUE,
     show_column_dend = TRUE,
@@ -823,11 +815,11 @@ plot =
       gb2 = textGrob(".")
       gb_w2 = convertWidth(grobWidth(gb2), "mm")
       gb_h2 = convertHeight(grobHeight(gb2), "mm")
-      if (t(cluster1_p)[i, j] < 0.05) {
+      if (t(predm_p)[i, j] < 0.05) {
         grid.text("*", x, y - gb_h1 * 0.5 + gb_w1 * 0.4, gp = gpar(col = "red"))
       }
       
-      if (t(cluster1_p)[i, j] > 0.05 & t(cluster1_p)[i, j] < 0.2) {
+      if (t(predm_p)[i, j] > 0.05 & t(predm_p)[i, j] < 0.2) {
         grid.points(
           pch = 20,
           x = x,
@@ -842,14 +834,14 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "cluster1_cor.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "IR_cor.pdf",
+#        width = 10,
+#        height = 10)
 
 plot =
   Heatmap(
-    t(cluster0_cor),
+    t(normal_cor),
     col = col_fun,
     border = TRUE,
     show_column_dend = TRUE,
@@ -871,11 +863,11 @@ plot =
       gb2 = textGrob(".")
       gb_w2 = convertWidth(grobWidth(gb2), "mm")
       gb_h2 = convertHeight(grobHeight(gb2), "mm")
-      if (t(cluster0_p)[i, j] < 0.05) {
+      if (t(normal_p)[i, j] < 0.05) {
         grid.text("*", x, y - gb_h1 * 0.5 + gb_w1 * 0.4, gp = gpar(col = "red"))
       }
       
-      if (t(cluster0_p)[i, j] > 0.05 & t(cluster0_p)[i, j] < 0.2) {
+      if (t(normal_p)[i, j] > 0.05 & t(normal_p)[i, j] < 0.2) {
         grid.points(
           pch = 20,
           x = x,
@@ -890,56 +882,59 @@ plot =
 
 plot = ggplotify::as.ggplot(plot)
 plot
-ggsave(plot,
-       filename = "cluster0_cor.pdf",
-       width = 10,
-       height = 10)
+# ggsave(plot,
+#        filename = "IS_cor.pdf",
+#        width = 10,
+#        height = 10)
 
-cor_data_cluster1
+cor_data_IR
 
-temp_cor_cluster0 <-
-  cluster0_cor  %>%
+
+temp_cor_is <-
+  normal_cor  %>%
   tibble::rownames_to_column(var = "food_group") %>%
   tidyr::pivot_longer(cols = -food_group,
                       names_to = "microbiome",
                       values_to = "cor")
 
-temp_p_cluster0 <-
-  cluster0_p  %>%
+temp_p_is <-
+  normal_p  %>%
   tibble::rownames_to_column(var = "food_group") %>%
   tidyr::pivot_longer(cols = -food_group,
                       names_to = "microbiome",
                       values_to = "p")
 
-temp_cluster0 <-
-  temp_cor_cluster0  %>%
-  dplyr::left_join(temp_p_cluster0, by = c("food_group", "microbiome"))
 
-temp_cor_cluster1 <-
-  cluster1_cor  %>%
+temp_is <-
+  temp_cor_is  %>%
+  dplyr::left_join(temp_p_is, by = c("food_group", "microbiome"))
+
+
+temp_cor_ir <-
+  predm_cor  %>%
   tibble::rownames_to_column(var = "food_group") %>%
   tidyr::pivot_longer(cols = -food_group,
                       names_to = "microbiome",
                       values_to = "cor")
 
-temp_p_cluster1 <-
-  cluster1_cor  %>%
+temp_p_ir <-
+  predm_cor  %>%
   tibble::rownames_to_column(var = "food_group") %>%
   tidyr::pivot_longer(cols = -food_group,
                       names_to = "microbiome",
                       values_to = "p")
 
-temp_cluster1 <-
-  temp_cor_cluster1  %>%
-  dplyr::left_join(temp_p_cluster1, by = c("food_group", "microbiome"))
+temp_ir <-
+  temp_cor_ir  %>%
+  dplyr::left_join(temp_p_ir, by = c("food_group", "microbiome"))
 
-dim(temp_cluster0)
-dim(temp_cluster1)
+dim(temp_is)
+dim(temp_ir)
 
 ###use histgram to show the distribution of the cor
 library(ggplot2)
 library(ggpubr)
-temp_cluster0  %>%
+temp_is  %>%
   ggplot(aes(cor)) +
   geom_histogram(binwidth = 0.1) +
   theme_bw() +
@@ -949,10 +944,8 @@ temp_cluster0  %>%
 ###use the density plot to show the distribution of the cor
 
 temp <-
-  rbind(
-    data.frame(temp_cluster0, class = "Cluster 0"),
-    data.frame(temp_cluster1, class = "Cluster 1")
-  )
+  rbind(data.frame(temp_is, class = "IS"),
+        data.frame(temp_ir, class = "IR"))
 
 ###the density plot below use the color to fill the density plot
 plot <-
@@ -960,7 +953,7 @@ plot <-
   ggplot(aes(cor)) +
   geom_density(aes(color = class)) +
   theme_bw() +
-  scale_color_manual(values = cluster0_1_color) +
+  scale_color_manual(values = ir_is_color) +
   labs(x = "Correlation", y = "Density")
 
 plot
@@ -969,9 +962,3 @@ ggsave(plot,
        filename = "cor_density_comparison.pdf",
        width = 8,
        height = 6)
-
-
-
-
-
-

@@ -3,20 +3,20 @@
 # library(tidyverse)
 # library(plyr)
 # rm(list = ls())
-# source("1-code/tools.R")
+# source("1_code/tools.R")
 # 
 # ###load data
 # {
 #   ##nutrition
-#   load("3-data_analysis/food_group/data_preparation/expression_data")
-#   load("3-data_analysis/food_group/data_preparation/sample_info")
-#   load("3-data_analysis/food_group/data_preparation/variable_info")
+#   load("3_data_analysis/food_group/data_preparation/expression_data")
+#   load("3_data_analysis/food_group/data_preparation/sample_info")
+#   load("3_data_analysis/food_group/data_preparation/variable_info")
 #   
 #   nutrition_expression_data = expression_data
 #   nutrition_sample_info = sample_info
 #   nutrition_variable_info = variable_info
 #   
-#   load("3-data_analysis/nutrition/data_preparation/sample_info")
+#   load("3_data_analysis/nutrition/data_preparation/sample_info")
 #   
 #   nutrition_sample_info = 
 #   nutrition_sample_info %>%
@@ -37,17 +37,17 @@
 #     nutrition_expression_data[,nutrition_sample_info$sample_id]
 #   
 #   ##microbiome
-#   load("3-data_analysis/gut_microbiome/data_preparation/expression_data")
-#   load("3-data_analysis/gut_microbiome/data_preparation/sample_info")
-#   load("3-data_analysis/gut_microbiome/data_preparation/variable_info")
+#   load("3_data_analysis/gut_microbiome/data_preparation/expression_data")
+#   load("3_data_analysis/gut_microbiome/data_preparation/sample_info")
+#   load("3_data_analysis/gut_microbiome/data_preparation/variable_info")
 #   
 #   microbiome_expression_data = expression_data
 #   microbiome_sample_info = sample_info
 #   microbiome_variable_info = variable_info
 # }
 # 
-# dir.create("3-data_analysis/food_group_vs_microbiome_t1_t4/based_on_a1c/")
-# setwd("3-data_analysis/food_group_vs_microbiome_t1_t4/based_on_a1c/")
+# dir.create("3_data_analysis/food_group_vs_microbiome_t1_t4/based_on_a1c/")
+# setwd("3_data_analysis/food_group_vs_microbiome_t1_t4/based_on_a1c/")
 # 
 # ###data preparation
 # nutrition_sample_info$Diet.Survey.Date

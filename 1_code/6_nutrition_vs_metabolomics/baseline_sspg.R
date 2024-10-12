@@ -3,14 +3,14 @@ setwd(r4projects::get_project_wd())
 library(tidyverse)
 library(plyr)
 rm(list = ls())
-source("1-code/tools.R")
+source("1_code/tools.R")
 
 ###load data
 {
   ##nutrition
-  load("3-data_analysis/nutrition/data_preparation/expression_data")
-  load("3-data_analysis/nutrition/data_preparation/sample_info")
-  load("3-data_analysis/nutrition/data_preparation/variable_info")
+  load("3_data_analysis/nutrition/data_preparation/expression_data")
+  load("3_data_analysis/nutrition/data_preparation/sample_info")
+  load("3_data_analysis/nutrition/data_preparation/variable_info")
   
   nutrition_expression_data = expression_data
   nutrition_sample_info = sample_info
@@ -38,16 +38,16 @@ source("1-code/tools.R")
     nutrition_expression_data[nutrition_variable_info$variable_id, ]
   
   ##metabolomics
-  load("3-data_analysis/metabolomics/data_preparation/expression_data")
-  load("3-data_analysis/metabolomics/data_preparation/sample_info")
-  load("3-data_analysis/metabolomics/data_preparation/variable_info")
+  load("3_data_analysis/metabolomics/data_preparation/expression_data")
+  load("3_data_analysis/metabolomics/data_preparation/sample_info")
+  load("3_data_analysis/metabolomics/data_preparation/variable_info")
   
   metabolomics_expression_data = expression_data
   metabolomics_sample_info = sample_info
   metabolomics_variable_info = variable_info
 }
 
-setwd("3-data_analysis/nutrition_vs_metabolomics/based_on_sspg/")
+setwd("3_data_analysis/nutrition_vs_metabolomics/based_on_sspg/")
 
 ###data preparation
 nutrition_sample_info$Diet.Survey.Date

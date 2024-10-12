@@ -36,7 +36,7 @@ colnames(expression_data) == sample_info$sample_id
 
 rownames(expression_data) == variable_info$variable_id
 
-save(sample_info, file = "3-data_analysis/nutrition/data_preparation/sample_info")
-save(expression_data, file = "3-data_analysis/nutrition/data_preparation/expression_data")
-save(variable_info, file = "3-data_analysis/nutrition/data_preparation/variable_info")
+save(sample_info, file = "3_data_analysis/nutrition/data_preparation/sample_info")
+save(expression_data, file = "3_data_analysis/nutrition/data_preparation/expression_data")
+save(variable_info, file = "3_data_analysis/nutrition/data_preparation/variable_info")
 
